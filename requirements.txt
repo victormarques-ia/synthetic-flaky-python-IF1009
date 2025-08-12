@@ -2,6 +2,10 @@
 pytest>=8.0.0
 pytest-json-report>=1.5.0
 
+# Mitigation strategies
+pytest-rerunfailures>=12.0  # Retries
+pytest-forked>=1.6.0        # Isolation
+
 # Data analysis and visualization
 pandas>=2.0.0
 matplotlib>=3.5.0

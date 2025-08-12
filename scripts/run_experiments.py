@@ -13,6 +13,9 @@ import subprocess
 import json
 import sys
 import time
+import random
+import numpy as np
+import os
 from pathlib import Path
 from datetime import datetime
 import argparse
@@ -27,11 +30,32 @@ def setup_args():
                        help="Output directory (default: results)")
     parser.add_argument("--verbose", action="store_true",
                        help="Enable verbose output")
+    parser.add_argument("--seeds", type=int, nargs='+', default=[42, 123, 999],
+                       help="Random seeds for reproducibility (default: 42 123 999)")
+    parser.add_argument("--single-seed", type=int, default=None,
+                       help="Use single seed instead of multiple seeds")
     return parser.parse_args()
 
 
-def run_pytest_with_markers(markers, run_number, output_file, verbose=False):
-    """Run pytest with specific markers"""
+def set_random_seeds(seed):
+    """Set random seeds for reproducibility"""
+    random.seed(seed)
+    np.random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    os.environ['RANDOM_SEED'] = str(seed)
+
+def run_pytest_with_markers(markers, run_number, output_file, seed, verbose=False):
+    """Run pytest with specific markers and seed"""
+    # For randomness tests, use dynamic seeds to preserve flakiness
+    # For other tests, use fixed seeds for reproducibility
+    if markers and "randomness" in markers:
+        # Create run-specific seed for randomness tests
+        run_seed = (seed * 1000) + run_number
+        set_random_seeds(run_seed)
+    else:
+        # Use fixed seed for non-randomness tests
+        set_random_seeds(seed)
+    
     cmd = [
         sys.executable, "-m", "pytest",
         "tests/",
@@ -40,18 +64,21 @@ def run_pytest_with_markers(markers, run_number, output_file, verbose=False):
         "-v" if verbose else "-q"
     ]
     
-    # Adiciona filtros de markers se especificado
+    # Add marker filters if specified
     if markers:
         cmd.extend(["-m", markers])
     
     if verbose:
         print(f"  Running: {' '.join(cmd)}")
     
+    # Pass environment variables to subprocess
+    env = os.environ.copy()
+    
     start_time = time.time()
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
     end_time = time.time()
     
-    # Adiciona metadados ao resultado
+    # Add metadata to result
     if Path(output_file).exists():
         with open(output_file, 'r') as f:
             data = json.load(f)
@@ -59,6 +86,8 @@ def run_pytest_with_markers(markers, run_number, output_file, verbose=False):
         data['experiment_meta'] = {
             'run_number': run_number,
             'markers': markers or "all",
+            'seed': seed,
+            'effective_seed': run_seed if markers and "randomness" in markers else seed,
             'duration_seconds': end_time - start_time,
             'timestamp': int(time.time()),
             'return_code': result.returncode,
@@ -68,7 +97,18 @@ def run_pytest_with_markers(markers, run_number, output_file, verbose=False):
         with open(output_file, 'w') as f:
             json.dump(data, f, indent=2)
     
-    return result.returncode == 0
+    # Return tuple: (success_rate, passed_tests, total_tests)
+    # This gives us the real flakiness data
+    if Path(output_file).exists():
+        with open(output_file, 'r') as f:
+            data = json.load(f)
+        summary = data.get('summary', {})
+        passed = summary.get('passed', 0)
+        total = summary.get('total', 1)
+        success_rate = passed / total if total > 0 else 0
+        return (success_rate, passed, total)
+    
+    return (0.0, 0, 0)  # If no file, consider 0% success
 
 
 def main():
@@ -79,11 +119,15 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(exist_ok=True)
     
+    # Determine seeds to use
+    seeds = [args.single_seed] if args.single_seed is not None else args.seeds
+    
     print("🧪 SYNTHETIC FLAKY PYTHON - SIMPLIFIED EXPERIMENTS")
     print("=" * 55)
     print(f"Runs per configuration: {args.runs}")
+    print(f"Seeds used: {seeds}")
     print(f"Output directory: {output_dir}")
-    print(f"Total experiments: {args.runs * 3} (3 configurations)")
+    print(f"Total experiments: {args.runs * len(seeds) * 3} (3 configurations × {len(seeds)} seeds)")
     print()
     
     # Experiment configurations
@@ -105,38 +149,52 @@ def main():
         config_results = []
         config_start = time.time()
         
-        for run in range(1, args.runs + 1):
-            output_file = output_dir / f"{config['name']}_run_{run:03d}.json"
+        for seed in seeds:
+            print(f"   🌱 Using seed: {seed}")
+            for run in range(1, args.runs + 1):
+                output_file = output_dir / f"{config['name']}_seed_{seed}_run_{run:03d}.json"
+                
+                success_rate, passed_tests, total_tests = run_pytest_with_markers(
+                    config['markers'], 
+                    run, 
+                    str(output_file), 
+                    seed,
+                    args.verbose
+                )
             
-            success = run_pytest_with_markers(
-                config['markers'], 
-                run, 
-                str(output_file), 
-                args.verbose
-            )
-            
-            config_results.append({
-                "run": run,
-                "success": success,
-                "output_file": str(output_file)
-            })
-            
-            if not args.verbose and run % 10 == 0:
-                successful = sum(1 for r in config_results if r['success'])
-                print(f"   Progress: {run}/{args.runs} ({successful} successful)")
+                config_results.append({
+                    "seed": seed,
+                    "run": run,
+                    "success_rate": success_rate,
+                    "passed_tests": passed_tests,
+                    "total_tests": total_tests,
+                    "output_file": str(output_file)
+                })
+                
+                if not args.verbose and run % 10 == 0:
+                    total_tests_passed = sum(r.get('passed_tests', 0) for r in config_results)
+                    total_possible = sum(r.get('total_tests', 0) for r in config_results)
+                    current_rate = (total_tests_passed / total_possible * 100) if total_possible > 0 else 0
+                    print(f"   Progress: seed {seed}, run {run}/{args.runs} ({current_rate:.1f}% tests passing)")
         
         config_end = time.time()
         config_duration = config_end - config_start
-        successful_runs = sum(1 for r in config_results if r['success'])
         
-        print(f"   ✅ Completed in {config_duration:.1f}s ({successful_runs}/{args.runs} successful)")
+        # Calculate real success statistics
+        total_tests_passed = sum(r.get('passed_tests', 0) for r in config_results)
+        total_possible_tests = sum(r.get('total_tests', 0) for r in config_results)
+        overall_success_rate = (total_tests_passed / total_possible_tests * 100) if total_possible_tests > 0 else 0
+        
+        print(f"   ✅ Completed in {config_duration:.1f}s ({overall_success_rate:.1f}% tests passed)")
         print()
         
         all_results.append({
             "configuration": config,
             "duration": config_duration,
-            "successful_runs": successful_runs,
-            "total_runs": args.runs,
+            "tests_passed": total_tests_passed,
+            "total_possible_tests": total_possible_tests,
+            "success_rate_percent": overall_success_rate,
+            "total_runs": args.runs * len(seeds),  # Fixed: account for all seeds
             "results": config_results
         })
     
@@ -148,9 +206,10 @@ def main():
         "experiment_info": {
             "timestamp": datetime.now().isoformat(),
             "total_duration": total_duration,
-            "configurations_count": len(configurations),
-            "runs_per_config": args.runs,
-            "total_runs": len(configurations) * args.runs
+                    "configurations_count": len(configurations),
+        "runs_per_config": args.runs,
+        "seeds_used": seeds,
+        "total_runs": len(configurations) * args.runs * len(seeds)
         },
         "configurations": all_results
     }
@@ -161,16 +220,25 @@ def main():
     
     # Final statistics
     total_runs = sum(config['total_runs'] for config in all_results)
-    total_successful = sum(config['successful_runs'] for config in all_results)
+    total_tests_passed = sum(config['tests_passed'] for config in all_results)
+    total_possible_tests = sum(config['total_possible_tests'] for config in all_results)
+    overall_success_rate = (total_tests_passed / total_possible_tests * 100) if total_possible_tests > 0 else 0
     
     print("=" * 55)
     print("📊 EXPERIMENT SUMMARY")
     print("=" * 55)
     print(f"Total duration: {total_duration:.1f}s ({total_duration/60:.1f} min)")
     print(f"Total runs: {total_runs}")
-    print(f"Successful runs: {total_successful}")
-    print(f"Success rate: {total_successful/total_runs*100:.1f}%")
+    print(f"Tests passed: {total_tests_passed}/{total_possible_tests}")
+    print(f"Overall success rate: {overall_success_rate:.1f}%")
     print(f"Average time per run: {total_duration/total_runs:.2f}s")
+    print()
+    print("📊 Configuration Results:")
+    for config in all_results:
+        name = config['configuration']['name']
+        rate = config['success_rate_percent']
+        flaky_rate = 100 - rate
+        print(f"   {name}: {rate:.1f}% pass rate ({flaky_rate:.1f}% flaky)")
     print()
     print(f"📁 Results saved in: {output_dir}/")
     print(f"📋 Summary: {summary_file}")
