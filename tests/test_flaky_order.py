@@ -1,197 +1,149 @@
 """
-Flaky tests based on execution order dependencies
-Tests that depend on state left by other tests
+Flaky tests based on state pollution between test executions
+Tests fail when global state gets polluted by previous test runs
 """
 import pytest
 import os
-import tempfile
+import random
 from pathlib import Path
 
 
-# Global state shared between tests
-global_state = {
-    "initialized": False,
-    "counter": 0,
-    "data": None,
-    "temp_file": None
+# This state persists within the same process across test runs
+# ISOLATION (--forked): Each test runs in new process → state always clean
+# RETRIES (--reruns): Same process reused → pollution accumulates
+global_pollution = {
+    "leaked_connections": [],
+    "stale_cache": {},
+    "error_count": 0,
+    "temp_files": [],
+    "env_vars_set": [],
+    "run_count": 0
 }
 
+def pollute_state():
+    """Simulates state pollution that accumulates over test runs"""
+    global_pollution["run_count"] += 1
+    global_pollution["leaked_connections"].append(f"conn_{global_pollution['run_count']}")
+    global_pollution["stale_cache"][f"key_{global_pollution['run_count']}"] = "stale_value"
+    global_pollution["error_count"] += 1
+    global_pollution["temp_files"].append(f"/tmp/leaked_{global_pollution['run_count']}.tmp")
+    
+    # Set environment variable that persists in same process
+    env_var = f"LEAKED_VAR_{global_pollution['run_count']}"
+    os.environ[env_var] = "polluted"
+    global_pollution["env_vars_set"].append(env_var)
 
 @pytest.mark.flaky
 @pytest.mark.order
-def test_order_01_initialize():
-    """Test that initializes global state - must run first"""
-    global_state["initialized"] = True
-    global_state["counter"] = 0
-    global_state["data"] = {"users": [], "settings": {}}
+def test_clean_application_start():
+    """
+    Test expects clean application state.
+    ISOLATION: Always clean (new process) → ~100% success
+    RETRIES: Pollution accumulates → low success rate
+    """
     
-    # Create temporary file
-    temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False)
-    temp_file.write("initial_data")
-    temp_file.close()
-    global_state["temp_file"] = temp_file.name
+    # This test ALWAYS pollutes state at the end, simulating cleanup failure
+    pollute_state()
     
-    assert global_state["initialized"] is True
-
-
-@pytest.mark.flaky
-@pytest.mark.order
-def test_order_02_use_state():
-    """Test that depends on initialized state"""
-    # Fails if test_order_01_initialize did not run first
-    assert global_state["initialized"] is True
-    assert global_state["data"] is not None
-    
-    # Modify state
-    global_state["counter"] += 1
-    global_state["data"]["users"].append("user1")
-    
-    assert global_state["counter"] == 1
-    assert len(global_state["data"]["users"]) == 1
+    # Test fails if there's ANY pollution from previous runs
+    assert len(global_pollution["leaked_connections"]) <= 1, f"Found leaked connections: {global_pollution['leaked_connections']}"
+    assert len(global_pollution["stale_cache"]) <= 1, f"Found stale cache: {global_pollution['stale_cache']}"
+    assert global_pollution["error_count"] <= 1, f"Error count too high: {global_pollution['error_count']}"
 
 
 @pytest.mark.flaky
 @pytest.mark.order
-def test_order_03_modify_state():
-    """Test that modifies existing state"""
-    # Depends on previous tests
-    assert global_state["counter"] == 1
-    assert "user1" in global_state["data"]["users"]
+def test_database_connection_pool():
     
-    # Add more data
-    global_state["counter"] += 1
-    global_state["data"]["users"].append("user2")
-    global_state["data"]["settings"]["theme"] = "dark"
+    # Always add pollution
+    pollute_state()
     
-    assert global_state["counter"] == 2
+    # Fail if too many leaked connections (indicates pollution from previous runs)
+    assert len(global_pollution["leaked_connections"]) <= 1, f"Connection pool polluted: {global_pollution['leaked_connections']}"
+
+
+@pytest.mark.flaky  
+@pytest.mark.order
+def test_cache_invalidation():
+    
+    # Always add pollution
+    pollute_state()
+    
+    # Fail if cache has accumulated too many stale entries
+    assert len(global_pollution["stale_cache"]) <= 1, f"Cache polluted: {global_pollution['stale_cache']}"
 
 
 @pytest.mark.flaky
 @pytest.mark.order
-def test_order_04_verify_final_state():
-    """Test that verifies final state"""
-    # Depends on all previous tests
-    assert global_state["counter"] == 2
-    assert len(global_state["data"]["users"]) == 2
-    assert global_state["data"]["settings"]["theme"] == "dark"
+def test_error_counter_reset():
     
-    # Clean up temporary file
-    if global_state["temp_file"] and os.path.exists(global_state["temp_file"]):
-        os.unlink(global_state["temp_file"])
+    # Always add pollution
+    pollute_state()
+    
+    # Fail if error count is too high (indicates accumulation from previous runs)
+    assert global_pollution["error_count"] <= 1, f"Error count too high: {global_pollution['error_count']}"
+
+
+@pytest.mark.flaky
+@pytest.mark.order  
+def test_temp_file_cleanup():
+    
+    # Always add pollution
+    pollute_state()
+    
+    # Fail if too many temp files (indicates cleanup failure from previous runs)
+    assert len(global_pollution["temp_files"]) <= 1, f"Temp files not cleaned: {global_pollution['temp_files']}"
 
 
 @pytest.mark.flaky
 @pytest.mark.order
-def test_order_file_dependency_1():
-    """Creates file that will be used by another test"""
-    config_file = Path("test_config.txt")
-    config_file.write_text("database_url=localhost:5432\napi_key=test123")
-    assert config_file.exists()
+def test_environment_variables():
+
+    # Always add pollution  
+    pollute_state()
+    
+    # Fail if too many leaked environment variables
+    assert len(global_pollution["env_vars_set"]) <= 1, f"Environment polluted: {global_pollution['env_vars_set']}"
 
 
 @pytest.mark.flaky
 @pytest.mark.order
-def test_order_file_dependency_2():
-    """Reads file created by previous test"""
-    config_file = Path("test_config.txt")
-    # Fails if file was not created by previous test
-    content = config_file.read_text()
-    assert "database_url" in content
-    assert "api_key" in content
+def test_process_state_isolation():
+
+    # Always add pollution
+    pollute_state()
     
-    # Modify file
-    content += "\ndebug=true"
-    config_file.write_text(content)
+    # Fail if this is not the first or second run in the same process
+    # (indicates we're in a retry scenario with accumulated state)
+    assert global_pollution["run_count"] <= 1, f"Process has been reused too many times: {global_pollution['run_count']}"
 
 
 @pytest.mark.flaky
 @pytest.mark.order
-def test_order_file_dependency_3():
-    """Verifies modifications to the file"""
-    config_file = Path("test_config.txt")
-    content = config_file.read_text()
-    assert "debug=true" in content
+def test_configuration_pollution():
+
+    # Always add pollution
+    pollute_state()
     
-    # Clean up file
-    if config_file.exists():
-        config_file.unlink()
-
-
-# Database dependency simulation
-database_state = {"tables": set(), "records": []}
+    # Check for environment variable pollution 
+    leaked_vars = [var for var in os.environ.keys() if var.startswith("LEAKED_VAR_")]
+    assert len(leaked_vars) <= 1, f"Found leaked environment variables: {leaked_vars}"
 
 
 @pytest.mark.flaky
-@pytest.mark.order
-def test_order_db_create_table():
-    """Simulates table creation in database"""
-    database_state["tables"].add("users")
-    database_state["records"].clear()
-    assert "users" in database_state["tables"]
-
-
-@pytest.mark.flaky
-@pytest.mark.order
-def test_order_db_insert_data():
-    """Simulates data insertion - depends on table existing"""
-    # Fails if table was not created
-    assert "users" in database_state["tables"]
+@pytest.mark.order  
+def test_memory_state_accumulation():
     
-    database_state["records"].append({"id": 1, "name": "John"})
-    database_state["records"].append({"id": 2, "name": "Jane"})
+    # Always add pollution
+    pollute_state()
     
-    assert len(database_state["records"]) == 2
-
-
-@pytest.mark.flaky
-@pytest.mark.order
-def test_order_db_query_data():
-    """Simulates data query - depends on data being inserted"""
-    # Fails if data was not inserted
-    assert len(database_state["records"]) == 2
+    # Calculate total pollution level
+    total_pollution = (
+        len(global_pollution["leaked_connections"]) +
+        len(global_pollution["stale_cache"]) + 
+        global_pollution["error_count"] +
+        len(global_pollution["temp_files"])
+    )
     
-    # Search by ID
-    john = next((r for r in database_state["records"] if r["id"] == 1), None)
-    assert john is not None
-    assert john["name"] == "John"
-
-
-@pytest.mark.flaky
-@pytest.mark.order
-def test_order_db_update_data():
-    """Simulates data update - depends on previous query"""
-    # Modify existing record
-    for record in database_state["records"]:
-        if record["id"] == 1:
-            record["name"] = "John Doe"
-            break
-    
-    # Verify modification
-    john = next((r for r in database_state["records"] if r["id"] == 1), None)
-    assert john["name"] == "John Doe"
-
-
-# Environment variable dependency
-@pytest.mark.flaky
-@pytest.mark.order
-def test_order_env_setup():
-    """Define environment variable for other tests"""
-    os.environ["TEST_MODE"] = "integration"
-    os.environ["API_BASE_URL"] = "http://test.example.com"
-    assert os.environ.get("TEST_MODE") == "integration"
-
-
-@pytest.mark.flaky
-@pytest.mark.order
-def test_order_env_usage():
-    """Uses environment variables defined previously"""
-    # Fails if variables were not defined
-    test_mode = os.environ.get("TEST_MODE")
-    api_url = os.environ.get("API_BASE_URL")
-    
-    assert test_mode == "integration"
-    assert api_url == "http://test.example.com"
-    
-    # Clean up variables
-    del os.environ["TEST_MODE"]
-    del os.environ["API_BASE_URL"]
+    # Fail if total pollution is too high (indicates accumulation)
+    assert total_pollution <= 4, f"Total pollution level too high: {total_pollution}"

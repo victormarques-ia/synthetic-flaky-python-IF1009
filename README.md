@@ -1,34 +1,64 @@
 # Synthetic Flaky Python
 
-A **simple and focused** framework for studying flaky (unstable) tests in Python, developed for academic projects.
+A **comprehensive framework** for empirical study of flaky test mitigation techniques, developed for academic research.
 
 ## 📋 Overview
 
-This project implements a controlled benchmark to study different types of flakiness in automated tests. The framework allows:
+This project implements a controlled benchmark to study different types of flakiness and mitigation strategies in automated tests. The framework provides:
 
-- **Run experiments** with 56 tests (15 stable + 41 flaky)
-- **Analyze instability** with statistical metrics
-- **Visualize results** with automatic graphs
-- **Compare configurations** (0%, ~5%, ~10% flakiness)
+- **Systematic Classification** of 5 main flakiness types with controlled reproduction
+- **Empirical Evaluation** of 4 mitigation techniques with quantitative metrics  
+- **Cost-Benefit Analysis** of each technique with ROI calculations
+- **Practical Recommendations** for developers based on data-driven insights
+- **Reproducible Framework** with fixed seeds for consistent results
 
 ## 🏗️ Project Structure
 
 ```
 synthetic-flaky-python/
-├── tests/                          # Fixed test suite
-│   ├── test_stable.py              # 15 tests always pass
-│   ├── test_flaky_randomness.py    # 10 random tests  
-│   ├── test_flaky_race.py          # 8 race condition tests
-│   ├── test_flaky_order.py         # 13 order dependency tests
-│   ├── test_flaky_external.py      # 10 external dependency tests
-│   ├── test_flaky_timeout.py       # 10 timeout tests
+├── tests/                          # Comprehensive test suite (5 flakiness types)
+│   ├── test_stable.py              # stable tests (baseline)
+│   ├── test_flaky_randomness.py    # randomness-based flaky tests  
+│   ├── test_flaky_race.py          # race condition tests
+│   ├── test_flaky_order.py         # order dependency tests
+│   ├── test_flaky_external.py      # external dependency tests
+│   ├── test_flaky_timeout.py       # timeout-sensitive tests
 │   └── pytest.ini                  # pytest configuration
 ├── scripts/
-│   ├── run_experiments.py          # Run experiments
-│   └── analyze_results.py          # Analyze results
-├── results/                        # Experiment results
+│   ├── run_comprehensive_study.py  # 🆕 MAIN: orchestrator script
+│   ├── config/                     # Configuration management
+│   │   └── study_config.py         # Study settings and flakiness profiles
+│   ├── classification/             # Flakiness classification system
+│   │   └── flakiness_classifier.py # Systematic type classification
+│   ├── execution/                  # Test execution engines
+│   │   └── experiment_runner.py    # Baseline and mitigation runners
+│   ├── analysis/                   # Data analysis modules
+│   │   └── data_analyzer.py        # Statistical analysis and metrics
+│   ├── visualization/              # Chart generation
+│   │   └── chart_generator.py      # Publication-quality visualizations
+│   ├── reporting/                  # Report generation
+│   │   └── report_generator.py     # Text reports and data persistence
+│   ├── utils/                      # Shared utilities
+│   │   └── helpers.py              # Common helper functions
+│   ├── MODULE_STRUCTURE.md         # 📋 Detailed module documentation
+├── comprehensive_results/          # Complete study results
 └── README.md
 ```
+
+## 🏛️ Modular Architecture
+
+The framework uses a **modular design** for maintainability and extensibility:
+
+- **🎯 `run_comprehensive_study.py`**: Main orchestrator script
+- **⚙️ `config/`**: Centralized configuration and flakiness type definitions
+- **🔬 `classification/`**: Systematic flakiness classification system  
+- **⚡ `execution/`**: Test execution engines for baseline and mitigation
+- **📊 `analysis/`**: Statistical analysis and effectiveness metrics
+- **📈 `visualization/`**: Publication-quality chart generation
+- **📋 `reporting/`**: Report generation and data persistence
+- **🛠️ `utils/`**: Shared helper functions and utilities
+
+📋 **Detailed Architecture**: See [`scripts/MODULE_STRUCTURE.md`](scripts/MODULE_STRUCTURE.md) for complete module documentation.
 
 ## 🚀 Quick Start
 
@@ -43,34 +73,39 @@ cd synthetic-flaky-python
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Install dependencies
+# Install dependencies (includes mitigation packages)
 pip install -r requirements.txt
 ```
 
-### 2. Run Experiments
+### 2. Run Complete Study
 
 ```bash
-# Complete experiment (30 runs × 3 configurations = 90 executions)
-python scripts/run_experiments.py --runs 30
+# 🎯 COMPREHENSIVE STUDY (RECOMMENDED)
+# Executes baseline analysis + mitigation strategies + complete analysis
+python scripts/run_comprehensive_study.py
 
-# Quick test experiment (3 runs × 3 configurations = 9 executions)
-python scripts/run_experiments.py --runs 3 --verbose
+# Quick test (for development/testing)
+python scripts/run_comprehensive_study.py --baseline-runs 2 --mitigation-runs 2
+
+# With custom settings
+python scripts/run_comprehensive_study.py --baseline-runs 10 --mitigation-runs 10 --verbose
 ```
 
-### 3. Analyze Results
+### 3. Results Generated
 
 ```bash
-# Complete analysis with visualizations
-python scripts/analyze_results.py --verbose
-
-# Results saved in results/
+# All results saved in comprehensive_results/
+# ✅ comprehensive_study_report.txt     - Complete analysis report
+# ✅ comprehensive_study_data.json      - All raw data and results  
+# ✅ *.png                              - 4 visualization charts
+# ✅ *.csv                              - Summary tables for analysis
 ```
 
-## 🧪 Types of Flaky Tests
+## 🧪 Flakiness Classification System
 
-The framework implements **5 main categories** of flakiness:
+The framework systematically implements **5 main categories** of flakiness for empirical analysis:
 
-### 1. **Randomness** (10 tests)
+### 1. **Randomness**
 Tests that depend on random numbers or probability.
 
 **Example:**
@@ -80,7 +115,7 @@ def test_random_coin_flip():
     assert random.random() > 0.5
 ```
 
-### 2. **Race Conditions** (8 tests)
+### 2. **Race Conditions**
 Race conditions between threads and concurrency issues.
 
 **Example:**
@@ -91,7 +126,7 @@ def test_race_counter_increment():
     assert shared_counter["value"] == 20  # May fail
 ```
 
-### 3. **Order Dependencies** (13 tests)
+### 3. **Order Dependencies**
 Tests that depend on execution order or global state.
 
 **Example:**
@@ -101,7 +136,7 @@ def test_order_use_state():
     assert global_state["initialized"] is True
 ```
 
-### 4. **External Dependencies** (10 tests)
+### 4. **External Dependencies** 
 Simulation of unstable APIs, databases, and external services.
 
 **Example:**
@@ -112,7 +147,7 @@ def test_external_api_call():
     assert response["id"] == 123
 ```
 
-### 5. **Timeout Issues** (10 tests)
+### 5. **Timeout Issues**
 Tests sensitive to performance and time limitations.
 
 **Example:**
@@ -123,149 +158,254 @@ def test_timeout_deadline_sensitive():
     assert duration < 0.02  # 20ms limit
 ```
 
-## 📊 Experiment Configurations
+## 🛠️ Mitigation Strategies
 
-The framework tests **3 different configurations**:
+The framework evaluates **4 main mitigation techniques**:
 
-| Configuration | Description | Tests Included |
-|--------------|-------------|----------------|
-| **baseline_0pct** | 0% flaky (control) | Only `test_stable.py` (15 tests) |
-| **mixed_5pct** | ~5% flaky | `stable` + `randomness` (25 tests) |
-| **mixed_10pct** | ~10% flaky | `stable` + `randomness` + `race` (33 tests) |
+### 1. **Retries** (pytest-rerunfailures)
+Re-execute failed tests multiple times to handle transient failures.
 
-## 📈 Collected Metrics
+**Configuration:**
+```bash
+pytest --reruns=3 --reruns-delay=1
+```
 
-### **Core Metrics**
-- **Pass Rate**: proportion of successful executions
-- **Flakiness Rate**: % of tests showing flaky behavior  
-- **Instability Index**: number of pass↔fail transitions per test
-- **Execution Time**: average execution time
+**Best for:** Timeout issues, external dependencies
+**Pros:** Easy to implement, low maintenance
+**Cons:** Increases execution time, doesn't fix root cause
 
-### **Generated Analysis**
-- **CSV**: `flakiness_analysis.csv`, `run_metadata.csv`
-- **JSON**: `summary_statistics.json`
-- **Graphs**: `flakiness_analysis.png`, `pass_rate_distribution.png`
+### 2. **Mocking** (unittest.mock)
+Replace unreliable dependencies with predictable mock objects.
 
-## 📋 Example Results
+**Example:**
+```python
+@patch('random.random')
+def test_with_mock(mock_random):
+    mock_random.return_value = 0.8  # Deterministic
+    assert random.random() > 0.5    # Always passes
+```
+
+**Best for:** External dependencies, randomness
+**Pros:** Eliminates external failures, fast execution
+**Cons:** High maintenance, may miss integration issues
+
+### 3. **Test Isolation** (pytest-forked)
+Execute each test in a separate process to prevent state sharing.
+
+**Configuration:**
+```bash
+pytest --forked
+```
+
+**Best for:** Order dependencies, race conditions
+**Pros:** Prevents state contamination, reliable
+**Cons:** Slower execution, higher resource usage
+
+### 4. **Combined Strategy**
+Use multiple techniques together for maximum effectiveness.
+
+**Configuration:**
+```bash
+pytest --reruns=2 --forked  # + mocking
+```
+
+**Best for:** Complex systems with multiple flakiness types
+**Pros:** Highest effectiveness
+**Cons:** Most complex and expensive to implement
+
+## 📊 Comprehensive Study Design
+
+The framework executes a **two-phase empirical study**:
+
+### **Phase 1: Baseline Analysis**
+Tests each flakiness type separately to establish baseline characteristics:
+
+### **Phase 2: Mitigation Analysis**
+Tests each mitigation strategy against all flaky tests to measure effectiveness.
+
+## 📈 Comprehensive Metrics
+
+### **Flakiness Classification Metrics**
+- **Pass Rate**: Proportion of successful test executions
+- **Flakiness Index**: Coefficient of variation in pass rates (instability measure)
+- **Severity Classification**: Low/Moderate/High/Severe based on index
+- **Predictability**: Consistency of failure patterns
+
+### **Mitigation Effectiveness Metrics**
+- **Improvement Rate**: Relative % improvement in pass rates
+- **Performance Overhead**: % increase in execution time
+- **Effectiveness Score**: Weighted score considering improvement vs overhead
+- **Cost-Effectiveness Ratio**: Improvement per unit of overhead
+
+### **Cost-Benefit Analysis**
+- **Implementation Cost**: Relative complexity to implement (1-10 scale)
+- **Maintenance Cost**: Ongoing effort required (1-10 scale)
+- **Return on Investment (ROI)**: (Benefits - Costs) / Costs
+- **Strategy Ranking**: Ordered by ROI and effectiveness
+
+### **Generated Outputs**
+- **📄 comprehensive_study_report.txt**: Complete analysis with recommendations
+- **📊 comprehensive_study_data.json**: All raw data and calculated metrics
+- **📈 Visualizations**: 4 charts covering all aspects of the study
+- **📋 CSV Summaries**: Baseline and mitigation data for further analysis
+
+## 📋 Example Study Results
 
 ```
-📊 FLAKINESS ANALYSIS - SUMMARY
-============================================================
+🎉 COMPREHENSIVE STUDY COMPLETED!
+======================================================================
+📊 Study Duration: 12.3 minutes
+📁 Results Directory: comprehensive_results/
 
-🔬 Configuration: baseline_0pct
-   Total tests: 15
-   Flaky tests: 0 (0.0%)
-   Average pass rate: 1.000
+🏆 KEY FINDINGS:
+   Best ROI: RETRIES (ROI: 2.45)
+   Most Effective: COMBINED (Score: 0.847)
+   Most Problematic Type: Randomness (47.2% pass rate)
 
-🔬 Configuration: mixed_5pct  
-   Total tests: 25
-   Flaky tests: 5 (20.0%)
-   Average pass rate: 0.787
+FLAKINESS CLASSIFICATION ANALYSIS
+----------------------------------------
+RANDOMNESS:
+  • Pass Rate: 47.2% (flakiness index: 0.342)
+  • Severity: High
+  • Mechanism: Non-deterministic assertions based on random values
 
-🔬 Configuration: mixed_10pct
-   Total tests: 33
-   Flaky tests: 8 (24.2%)
-   Average pass rate: 0.802
+EXTERNAL:
+  • Pass Rate: 68.5% (flakiness index: 0.198)
+  • Severity: Moderate  
+  • Mechanism: Network failures and service unavailability
 
-🔴 TOP 5 MOST UNSTABLE TESTS:
-   1. test_race_flag_timing (instability: 2, pass rate: 0.67)
-   2. test_random_coin_flip (instability: 2, pass rate: 0.33)
-   3. test_random_low_probability (instability: 2, pass rate: 0.33)
+MITIGATION STRATEGY EFFECTIVENESS
+----------------------------------------
+RETRIES:
+  • Pass Rate Improvement: +23.4%
+  • Performance Overhead: +47.2%
+  • Effectiveness Score: 0.634
+
+MOCKING:
+  • Pass Rate Improvement: +41.8%
+  • Performance Overhead: +12.1%
+  • Effectiveness Score: 0.798
+
+PRACTICAL RECOMMENDATIONS
+----------------------------------------
+Implementation Priority Ranking:
+  1. MOCKING (ROI: 3.12)
+  2. RETRIES (ROI: 2.45)
+  3. ISOLATION (ROI: 1.89)
+  4. COMBINED (ROI: 1.34)
+
+Recommendations by Flakiness Type:
+  • Randomness: Use MOCKING (Expected effectiveness: 90%)
+  • External: Use MOCKING (Expected effectiveness: 95%)
+  • Race: Use ISOLATION (Expected effectiveness: 90%)
 ```
 
 ## ⚙️ Configuration Options
 
-### Experiment Script (`run_experiments.py`)
+### Comprehensive Study Script (`run_comprehensive_study.py`)
 
 ```bash
-python scripts/run_experiments.py [options]
+python scripts/run_comprehensive_study.py [options]
 
 Options:
-  --runs N              Number of runs per configuration (default: 30)
-  --output-dir DIR      Output directory (default: results)
-  --verbose            Detailed output
+  --baseline-runs N     Runs per baseline type (default: 15)
+  --mitigation-runs N   Runs per mitigation strategy (default: 15)  
+  --output-dir DIR      Output directory (default: comprehensive_results)
+  --seeds N N N         Random seeds for reproducibility (default: 42 123 999)
+  --verbose            Detailed output during execution
+  --skip-baseline      Skip baseline phase (use existing data)
+  --skip-mitigation    Skip mitigation phase (use existing data)
 ```
 
-### Analysis Script (`analyze_results.py`)
+## 🎓 For Academic Research
 
+### **Publication-Ready Study**
 ```bash
-python scripts/analyze_results.py [options]
-
-Options:
-  --input-dir DIR       Directory with results (default: results)
-  --output-dir DIR      Output directory (default: results)
-  --verbose            Detailed output
+# Complete empirical study for papers/thesis
+python scripts/run_comprehensive_study.py --baseline-runs 30 --mitigation-runs 10
 ```
 
-## 🎓 For Academic Projects
+### **Generated Outputs**
+- **📄 Comprehensive Report**
+- **📊 Quantitative Data**
+- **📈 Publication-Quality Visualizations**
+- **🎯 Evidence-Based Recommendations**
+- **📋 Systematic Classification**
+- **💰 Cost-Benefit Analysis**
 
-### **Recommended Configuration**
-```bash
-# Standard experiment for thesis/dissertation
-python scripts/run_experiments.py --runs 30  # 90 total executions
-python scripts/analyze_results.py --verbose   # Complete analysis
-```
+### **Research Contributions**
+- **Techniques**: Reproducible framework with controlled flakiness
+- **Practices**: Systematic evaluation protocol for mitigation strategies  
+- **Results**: Quantitative effectiveness data and practical recommendations
 
-### **Execution Time**
-- **Complete experiment**: ~5-8 minutes
-- **Analysis**: ~30 seconds
-- **Total**: less than 10 minutes
+## 🔬 Framework Extension
 
-### **Data for Report**
-- Ready-to-use tables in CSV
-- High-resolution graphs (PNG)
-- Structured statistics in JSON
-- Ranking of most unstable tests
-
-## 🔬 Customization
-
-### **Adding New Tests**
-1. Edit files in `tests/test_flaky_*.py`
-2. Use appropriate markers: `@pytest.mark.flaky`, `@pytest.mark.randomness`
-3. Run experiments again
-
-### **Modifying Configurations**
-Edit configurations in `scripts/run_experiments.py`:
+### **Adding New Flakiness Types**
+1. Create new test file: `tests/test_flaky_newtype.py`
+2. Add appropriate markers: `@pytest.mark.flaky`, `@pytest.mark.newtype`
+3. Update flakiness profiles in `scripts/classification/flakiness_classifier.py`:
 
 ```python
-configurations = [
-    {"name": "baseline_0pct", "markers": "stable"},
-    {"name": "custom_config", "markers": "stable or timeout"},
-    # Add your configurations
-]
+"newtype": FlakynessProfile(
+    test_type="newtype",
+    description="Your new flakiness description",
+    failure_mechanism="Explanation of failure",
+    typical_pass_rate=0.6,  # Expected pass rate
+    mitigation_effectiveness={
+        "retries": 0.3, "mocking": 0.8, 
+        "isolation": 0.5, "combined": 0.9
+    }
+)
 ```
+
+### **Adding New Mitigation Strategies**
+1. Implement strategy method in `scripts/execution/experiment_runner.py`
+2. Add to `MitigationRunner` class strategies
+3. Update cost definitions in `scripts/analysis/data_analyzer.py`
+4. Update visualization logic in `scripts/visualization/chart_generator.py`
 
 ## 📚 Data Structure
 
-### Result File (`*.json`)
+### Comprehensive Study Data (`comprehensive_study_data.json`)
 ```json
 {
-  "summary": {
-    "collected": 25,
-    "passed": 20,
-    "failed": 5
+  "study_metadata": {
+    "study_type": "comprehensive_flaky_test_analysis",
+    "timestamp": "2024-01-01T12:00:00",
+    "configuration": { "baseline_runs": 10, "mitigation_runs": 10 }
   },
-  "tests": [
-    {
-      "nodeid": "tests/test_stable.py::test_stable_arithmetic",
-      "outcome": "passed",
-      "duration": 0.001
+  "baseline_results": {
+    "randomness": {
+      "avg_pass_rate": 0.472,
+      "flakiness_index": 0.342,
+      "total_runs": 90
     }
-  ],
-  "experiment_meta": {
-    "run_number": 1,
-    "markers": "stable or randomness",
-    "duration_seconds": 0.51
+  },
+  "mitigation_results": {
+    "retries": {
+      "avg_pass_rate": 0.756,
+      "avg_execution_time": 2.34,
+      "total_runs": 10
+    }
+  },
+  "analysis_results": {
+    "mitigation_effectiveness": {
+      "retries": {
+        "pass_rate_improvement": { "relative_percent": 23.4 },
+        "effectiveness_score": 0.634
+      }
+    },
+    "cost_benefit_analysis": {
+      "retries": { "roi": 2.45, "recommendation": "Recommended" }
+    }
   }
 }
 ```
 
-### Flakiness Analysis (`flakiness_analysis.csv`)
-```csv
-configuration,test_name,total_runs,passes,fails,pass_rate,is_flaky,instability_index
-baseline_0pct,test_stable_arithmetic,30,30,0,1.0,False,0
-mixed_5pct,test_random_coin_flip,30,15,15,0.5,True,8
-```
+### CSV Summaries
+- **`baseline_summary.csv`**: Pass rates and flakiness indices by type
+- **`mitigation_summary.csv`**: Effectiveness and overhead by strategy
+
 
 ## 🤝 Contributing
 
@@ -278,14 +418,3 @@ mixed_5pct,test_random_coin_flip,30,15,15,0.5,True,8
 ## 📄 License
 
 MIT License - see LICENSE file for details.
-
-## 🎯 Next Steps
-
-1. **Run the experiment**: `python scripts/run_experiments.py --runs 30`
-2. **Analyze results**: `python scripts/analyze_results.py`
-3. **Use the data**: CSV tables and PNG graphs for your report
-4. **Customize**: Add new types of flakiness as needed
-
----
-
-**Synthetic Flaky Python** - Simple framework for research in automated test flakiness 🧪

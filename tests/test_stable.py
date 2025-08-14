@@ -117,8 +117,8 @@ def test_stable_file_path_operations():
 def test_stable_datetime_parsing():
     """Deterministic datetime parsing"""
     from datetime import datetime
-    dt = datetime(2024, 1, 1, 12, 0, 0)
-    assert dt.year == 2024
+    dt = datetime(2025, 1, 1, 12, 0, 0)
+    assert dt.year == 2025
     assert dt.month == 1
 
 
