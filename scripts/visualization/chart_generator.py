@@ -243,10 +243,12 @@ class ChartGenerator:
                 baseline_types.append(test_type.replace('_', ' ').title())
                 baseline_pass_rates.append(data['avg_pass_rate'])
                 
-                # Calculate average execution time
+                # Calculate median execution time (more robust to outliers)
                 results = data.get('results', [])
                 exec_times = [r.get('execution_time', 0) for r in results if 'execution_time' in r]
-                baseline_exec_times.append(np.mean(exec_times) if exec_times else 0)
+                # Filter outliers using IQR method
+                filtered_times = self._filter_outliers(exec_times)
+                baseline_exec_times.append(np.median(filtered_times) if filtered_times else 0)
         
         # Baseline pass rates
         axes[0,0].bar(baseline_types, baseline_pass_rates, color='lightcoral', alpha=0.7)
@@ -257,7 +259,7 @@ class ChartGenerator:
         
         # Baseline execution times
         axes[0,1].bar(baseline_types, baseline_exec_times, color='lightblue', alpha=0.7)
-        axes[0,1].set_title('Baseline Execution Times by Type')
+        axes[0,1].set_title('Baseline Execution Times by Type (Median, Outliers Filtered)')
         axes[0,1].set_ylabel('Execution Time (seconds)')
         axes[0,1].tick_params(axis='x', rotation=45)
         
@@ -272,7 +274,10 @@ class ChartGenerator:
             if baseline_flaky:
                 mit_strategies.insert(0, 'baseline')
                 mit_pass_rates.insert(0, baseline_flaky['avg_pass_rate'])
-                baseline_exec_time = np.mean([r.get('execution_time', 0) for r in baseline_flaky.get('results', [])])
+                # Use median and filter outliers for fair comparison
+                baseline_times = [r.get('execution_time', 0) for r in baseline_flaky.get('results', [])]
+                filtered_baseline_times = self._filter_outliers(baseline_times)
+                baseline_exec_time = np.median(filtered_baseline_times) if filtered_baseline_times else 0
                 mit_exec_times.insert(0, baseline_exec_time)
             
             # Pass rate comparison
@@ -285,10 +290,55 @@ class ChartGenerator:
             
             # Execution time comparison
             axes[1,1].bar(mit_strategies, mit_exec_times, color=colors, alpha=0.7)
-            axes[1,1].set_title('Execution Time: Baseline vs Mitigation Strategies')
+            axes[1,1].set_title('Execution Time: Baseline vs Mitigation Strategies (Fair Comparison)')
             axes[1,1].set_ylabel('Execution Time (seconds)')
             axes[1,1].tick_params(axis='x', rotation=45)
+            
+            # Add note about methodology
+            axes[1,1].text(0.02, 0.98, 'Note: Baseline uses median with outlier filtering', 
+                          transform=axes[1,1].transAxes, fontsize=8, verticalalignment='top',
+                          bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
         
         plt.tight_layout()
         plt.savefig(output_dir / 'performance_analysis.png', dpi=300, bbox_inches='tight')
         plt.close()
+    
+    def _filter_outliers(self, data: list, method='iqr') -> list:
+        """Filter outliers using IQR method or Z-score method"""
+        if not data or len(data) < 3:
+            return data
+        
+        data_array = np.array(data)
+        
+        if method == 'iqr':
+            # Interquartile Range method
+            Q1 = np.percentile(data_array, 25)
+            Q3 = np.percentile(data_array, 75)
+            IQR = Q3 - Q1
+            
+            # Define outlier bounds
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+            
+            # Filter outliers
+            filtered_data = data_array[(data_array >= lower_bound) & (data_array <= upper_bound)]
+            
+        elif method == 'zscore':
+            # Z-score method (more aggressive)
+            mean = np.mean(data_array)
+            std = np.std(data_array)
+            
+            if std == 0:
+                return data
+            
+            z_scores = np.abs((data_array - mean) / std)
+            filtered_data = data_array[z_scores < 2]  # Remove data points with |z-score| > 2
+        
+        else:
+            return data
+        
+        # Return at least 50% of original data to avoid over-filtering
+        if len(filtered_data) < len(data) * 0.5:
+            return data
+        
+        return filtered_data.tolist()
