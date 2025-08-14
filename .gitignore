@@ -33,6 +33,7 @@ Thumbs.db
 # Results - Keep structure but ignore content
 results/*
 mitigation_results/*
+comprehensive_results/*
 !results/.gitkeep
 
 # Documentation drafts
