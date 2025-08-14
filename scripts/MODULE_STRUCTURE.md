@@ -38,7 +38,7 @@ scripts/
 
 **Key Components**:
 ```python
-StudyConfiguration(baseline_runs=30, mitigation_runs=10, seeds=[42, 123, 999])
+StudyConfiguration(baseline_runs=15, mitigation_runs=15, seeds=[42, 123, 999])
 IMPLEMENTATION_COSTS = {'retries': 2, 'mocking': 6, 'isolation': 4, 'combined': 8}
 BASELINE_CONFIGURATIONS = [stable_only, randomness, timeout, order, external, race, all_flaky]
 ```
@@ -189,7 +189,7 @@ Configuration → BaselineRunner → Results
 ## 🚀 Usage
 
 ```bash
-python scripts/run_comprehensive_study.py --baseline-runs 30 --mitigation-runs 10
+python scripts/run_comprehensive_study.py --baseline-runs 15 --mitigation-runs 15
 ```
 
 ## 🔧 Development

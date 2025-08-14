@@ -133,10 +133,10 @@ class ComprehensiveStudy:
 def setup_args():
     """Setup command line arguments"""
     parser = argparse.ArgumentParser(description="Run comprehensive flaky test study")
-    parser.add_argument("--baseline-runs", type=int, default=30,
-                       help="Number of runs per baseline configuration (default: 30)")
-    parser.add_argument("--mitigation-runs", type=int, default=10,
-                       help="Number of runs per mitigation strategy (default: 10)")
+    parser.add_argument("--baseline-runs", type=int, default=15,
+                       help="Number of runs per baseline configuration (default: 15)")
+    parser.add_argument("--mitigation-runs", type=int, default=15,
+                       help="Number of runs per mitigation strategy (default: 15)")
     parser.add_argument("--output-dir", type=str, default="comprehensive_results",
                        help="Output directory (default: comprehensive_results)")
     parser.add_argument("--verbose", action="store_true",

@@ -31,10 +31,7 @@ Thumbs.db
 *.log
 
 # Results - Keep structure but ignore content
-results/*
-mitigation_results/*
-comprehensive_results/*
-!results/.gitkeep
+comprehensive_results/*.json
 
 # Documentation drafts
 docs/drafts/

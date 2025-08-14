@@ -204,6 +204,7 @@ class MitigationRunner:
         
         return parse_test_result(output_file, run_number, execution_time, result.returncode)
     
+    
     def _run_mocking_strategy(self, run_number: int) -> Dict:
         """Execute mocking mitigation strategy"""
         output_file = self.output_dir / f"mitigation_mocking_run_{run_number:03d}.json"

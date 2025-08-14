@@ -13,8 +13,8 @@ from pathlib import Path
 @dataclass
 class StudyConfiguration:
     """Configuration for the comprehensive study"""
-    baseline_runs: int = 30
-    mitigation_runs: int = 10
+    baseline_runs: int = 15
+    mitigation_runs: int = 15
     seeds: List[int] = None
     output_dir: str = "comprehensive_results"
     verbose: bool = False

@@ -149,7 +149,7 @@ def test_timeout_retry_mechanism():
             if attempt == max_attempts - 1:
                 pytest.fail("All retry attempts failed")
     
-    assert True  # Se chegou aqui, sucesso
+    assert True
 
 
 @pytest.mark.flaky

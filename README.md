@@ -20,17 +20,45 @@ synthetic-flaky-python/
 │   ├── test_stable.py              # 15 stable tests (baseline)
 │   ├── test_flaky_randomness.py    # 10 randomness-based flaky tests  
 │   ├── test_flaky_race.py          # 8 race condition tests
-│   ├── test_flaky_order.py         # 13 order dependency tests
+│   ├── test_flaky_order.py         # 13 order dependency tests (with instability simulation)
 │   ├── test_flaky_external.py      # 10 external dependency tests
 │   ├── test_flaky_timeout.py       # 10 timeout-sensitive tests
 │   └── pytest.ini                  # pytest configuration
 ├── scripts/
-│   ├── run_experiments.py          # Legacy: baseline experiments only
-│   ├── run_mitigation_study.py     # Legacy: mitigation strategies only
-│   └── run_comprehensive_study.py  # 🆕 UNIFIED: complete study + analysis
+│   ├── run_comprehensive_study.py  # 🆕 MAIN: orchestrator script
+│   ├── config/                     # Configuration management
+│   │   └── study_config.py         # Study settings and flakiness profiles
+│   ├── classification/             # Flakiness classification system
+│   │   └── flakiness_classifier.py # Systematic type classification
+│   ├── execution/                  # Test execution engines
+│   │   └── experiment_runner.py    # Baseline and mitigation runners
+│   ├── analysis/                   # Data analysis modules
+│   │   └── data_analyzer.py        # Statistical analysis and metrics
+│   ├── visualization/              # Chart generation
+│   │   └── chart_generator.py      # Publication-quality visualizations
+│   ├── reporting/                  # Report generation
+│   │   └── report_generator.py     # Text reports and data persistence
+│   ├── utils/                      # Shared utilities
+│   │   └── helpers.py              # Common helper functions
+│   ├── MODULE_STRUCTURE.md         # 📋 Detailed module documentation
 ├── comprehensive_results/          # Complete study results
 └── README.md
 ```
+
+## 🏛️ Modular Architecture
+
+The framework uses a **modular design** for maintainability and extensibility:
+
+- **🎯 `run_comprehensive_study.py`**: Main orchestrator script
+- **⚙️ `config/`**: Centralized configuration and flakiness type definitions
+- **🔬 `classification/`**: Systematic flakiness classification system  
+- **⚡ `execution/`**: Test execution engines for baseline and mitigation
+- **📊 `analysis/`**: Statistical analysis and effectiveness metrics
+- **📈 `visualization/`**: Publication-quality chart generation
+- **📋 `reporting/`**: Report generation and data persistence
+- **🛠️ `utils/`**: Shared helper functions and utilities
+
+📋 **Detailed Architecture**: See [`scripts/MODULE_STRUCTURE.md`](scripts/MODULE_STRUCTURE.md) for complete module documentation.
 
 ## 🚀 Quick Start
 
@@ -57,10 +85,10 @@ pip install -r requirements.txt
 python scripts/run_comprehensive_study.py
 
 # Quick test (for development/testing)
-python scripts/run_comprehensive_study.py --baseline-runs 5 --mitigation-runs 3
+python scripts/run_comprehensive_study.py --baseline-runs 2 --mitigation-runs 2
 
 # With custom settings
-python scripts/run_comprehensive_study.py --baseline-runs 30 --mitigation-runs 10 --verbose
+python scripts/run_comprehensive_study.py --baseline-runs 10 --mitigation-runs 10 --verbose
 ```
 
 ### 3. Results Generated
@@ -172,6 +200,7 @@ pytest --forked
 **Best for:** Order dependencies, race conditions
 **Pros:** Prevents state contamination, reliable
 **Cons:** Slower execution, higher resource usage
+**⚠️ Note:** May reduce pass rates for order-dependent tests that rely on shared state
 
 ### 4. **Combined Strategy**
 Use multiple techniques together for maximum effectiveness.
@@ -299,23 +328,12 @@ Options:
   --skip-mitigation    Skip mitigation phase (use existing data)
 ```
 
-### Legacy Scripts (Individual Components)
-
-```bash
-# Run only baseline experiments
-python scripts/run_experiments.py --runs 30
-
-# Run only mitigation study  
-python scripts/run_mitigation_study.py
-```
-
 ## 🎓 For Academic Research
 
 ### **Publication-Ready Study**
 ```bash
 # Complete empirical study for papers/thesis
 python scripts/run_comprehensive_study.py --baseline-runs 30 --mitigation-runs 10
-# Total: 870 test executions (baseline: 7×30×3seeds + mitigation: 4×10)
 ```
 
 ### **Study Execution Time**
@@ -342,7 +360,7 @@ python scripts/run_comprehensive_study.py --baseline-runs 30 --mitigation-runs 1
 ### **Adding New Flakiness Types**
 1. Create new test file: `tests/test_flaky_newtype.py`
 2. Add appropriate markers: `@pytest.mark.flaky`, `@pytest.mark.newtype`
-3. Update flakiness profiles in `run_comprehensive_study.py`:
+3. Update flakiness profiles in `scripts/classification/flakiness_classifier.py`:
 
 ```python
 "newtype": FlakynessProfile(
@@ -358,9 +376,10 @@ python scripts/run_comprehensive_study.py --baseline-runs 30 --mitigation-runs 1
 ```
 
 ### **Adding New Mitigation Strategies**
-1. Implement strategy method in `ComprehensiveStudy` class
-2. Add to strategies dict in `run_mitigation_experiments()`
-3. Update cost definitions for cost-benefit analysis
+1. Implement strategy method in `scripts/execution/experiment_runner.py`
+2. Add to `MitigationRunner` class strategies
+3. Update cost definitions in `scripts/analysis/data_analyzer.py`
+4. Update visualization logic in `scripts/visualization/chart_generator.py`
 
 ## 📚 Data Structure
 
@@ -370,7 +389,7 @@ python scripts/run_comprehensive_study.py --baseline-runs 30 --mitigation-runs 1
   "study_metadata": {
     "study_type": "comprehensive_flaky_test_analysis",
     "timestamp": "2024-01-01T12:00:00",
-    "configuration": { "baseline_runs": 30, "mitigation_runs": 10 }
+    "configuration": { "baseline_runs": 10, "mitigation_runs": 10 }
   },
   "baseline_results": {
     "randomness": {
@@ -403,6 +422,7 @@ python scripts/run_comprehensive_study.py --baseline-runs 30 --mitigation-runs 1
 ### CSV Summaries
 - **`baseline_summary.csv`**: Pass rates and flakiness indices by type
 - **`mitigation_summary.csv`**: Effectiveness and overhead by strategy
+
 
 ## 🤝 Contributing
 
