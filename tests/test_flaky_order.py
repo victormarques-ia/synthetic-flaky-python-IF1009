@@ -5,6 +5,7 @@ Tests that depend on state left by other tests
 import pytest
 import os
 import tempfile
+import random
 from pathlib import Path
 
 
@@ -15,6 +16,51 @@ global_state = {
     "data": None,
     "temp_file": None
 }
+
+
+@pytest.fixture(autouse=True)
+def simulate_order_instability():
+    """
+    Occasionally resets state to simulate order dependency failures.
+    This makes tests flaky by breaking the expected order dependencies.
+    """
+    # Use environment variable for controlled randomness
+    seed_value = int(os.environ.get('RANDOM_SEED', 42))
+    random.seed(seed_value + hash(os.urandom(4)))
+    
+    # 30% chance to reset state (simulating test isolation or order changes)
+    if random.random() < 0.3:
+        # Clean up any existing temp files
+        if global_state.get("temp_file") and os.path.exists(global_state["temp_file"]):
+            try:
+                os.unlink(global_state["temp_file"])
+            except:
+                pass
+        
+        # Reset global state - this breaks order dependencies
+        global_state.clear()
+        global_state.update({
+            "initialized": False,
+            "counter": 0,
+            "data": None,
+            "temp_file": None
+        })
+        
+        # Also clean up file dependencies
+        config_file = Path("test_config.txt")
+        if config_file.exists():
+            try:
+                config_file.unlink()
+            except:
+                pass
+    
+    yield  # Run the test
+    
+    # Occasionally clean up after test (20% chance)
+    if random.random() < 0.2:
+        # Partial cleanup to simulate resource management issues
+        if "settings" in global_state.get("data", {}):
+            global_state["data"]["settings"].clear()
 
 
 @pytest.mark.flaky
