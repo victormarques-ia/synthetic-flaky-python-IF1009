@@ -86,7 +86,9 @@ def test_stable_string_formatting():
     """Deterministic string formatting"""
     name = "Python"
     version = 3.10
-    result = f"Language: {name} {version}"
+    # A f-string converte 3.10 para '3.1'
+    result = f"Language: {name} {version}" 
+    # A asserção deve verificar o resultado esperado da formatação
     assert result == "Language: Python 3.1"
 
 

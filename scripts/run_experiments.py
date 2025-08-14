@@ -44,71 +44,80 @@ def set_random_seeds(seed):
     os.environ['PYTHONHASHSEED'] = str(seed)
     os.environ['RANDOM_SEED'] = str(seed)
 
+# Em run_experiments.py, substitua a função inteira por esta:
+
 def run_pytest_with_markers(markers, run_number, output_file, seed, verbose=False):
-    """Run pytest with specific markers and seed"""
-    # For randomness tests, use dynamic seeds to preserve flakiness
-    # For other tests, use fixed seeds for reproducibility
+    """Run pytest with specific markers and seed, using an absolute path to tests."""
     if markers and "randomness" in markers:
-        # Create run-specific seed for randomness tests
         run_seed = (seed * 1000) + run_number
         set_random_seeds(run_seed)
     else:
-        # Use fixed seed for non-randomness tests
         set_random_seeds(seed)
+    
+    # --- INÍCIO DA CORREÇÃO FINAL ---
+    # Constrói o caminho absoluto para a pasta de testes
+    # Isso garante que o pytest sempre encontre os arquivos corretos
+    project_root = Path(__file__).parent.parent # Sobe dois níveis: scripts -> raiz do projeto
+    tests_dir = project_root / "tests"
+    # --- FIM DA CORREÇÃO FINAL ---
     
     cmd = [
         sys.executable, "-m", "pytest",
-        "tests/",
+        str(tests_dir), # Usa o caminho absoluto
         "--json-report",
         f"--json-report-file={output_file}",
         "-v" if verbose else "-q"
     ]
     
-    # Add marker filters if specified
     if markers:
         cmd.extend(["-m", markers])
     
     if verbose:
         print(f"  Running: {' '.join(cmd)}")
     
-    # Pass environment variables to subprocess
     env = os.environ.copy()
-    
     start_time = time.time()
     result = subprocess.run(cmd, capture_output=True, text=True, env=env)
     end_time = time.time()
+
+    if result.returncode not in [0, 1, 5]: # Código 1 (falhas) agora é aceitável
+        print(f"❌ ERRO FATAL no Pytest (run {run_number}, seed {seed}). Código: {result.returncode}", file=sys.stderr)
+        if result.stdout:
+            print("--- Stdout do Pytest: ---", file=sys.stderr)
+            print(result.stdout, file=sys.stderr)
+        if result.stderr:
+            print("--- Stderr do Pytest: ---", file=sys.stderr)
+            print(result.stderr, file=sys.stderr)
+        return (0.0, 0, 0)
     
-    # Add metadata to result
-    if Path(output_file).exists():
-        with open(output_file, 'r') as f:
+    if not Path(output_file).exists():
+        if verbose:
+            print(f"  ⚠️ Warning: No report file found for run {run_number}.", file=sys.stderr)
+        return (0.0, 0, 0)
+
+    try:
+        with open(output_file, 'r+') as f:
             data = json.load(f)
-        
-        data['experiment_meta'] = {
-            'run_number': run_number,
-            'markers': markers or "all",
-            'seed': seed,
-            'effective_seed': run_seed if markers and "randomness" in markers else seed,
-            'duration_seconds': end_time - start_time,
-            'timestamp': int(time.time()),
-            'return_code': result.returncode,
-            'command': ' '.join(cmd)
-        }
-        
-        with open(output_file, 'w') as f:
+            data['experiment_meta'] = {
+                'run_number': run_number, 'markers': markers or "all", 'seed': seed,
+                'effective_seed': run_seed if markers and "randomness" in markers else seed,
+                'duration_seconds': end_time - start_time, 'timestamp': int(time.time()),
+                'return_code': result.returncode, 'command': ' '.join(cmd)
+            }
+            f.seek(0)
             json.dump(data, f, indent=2)
-    
-    # Return tuple: (success_rate, passed_tests, total_tests)
-    # This gives us the real flakiness data
-    if Path(output_file).exists():
-        with open(output_file, 'r') as f:
-            data = json.load(f)
-        summary = data.get('summary', {})
-        passed = summary.get('passed', 0)
-        total = summary.get('total', 1)
-        success_rate = passed / total if total > 0 else 0
-        return (success_rate, passed, total)
-    
-    return (0.0, 0, 0)  # If no file, consider 0% success
+            f.truncate()
+
+            summary = data.get('summary', {})
+            passed = summary.get('passed', 0)
+            total = summary.get('total', 0) 
+            
+            success_rate = passed / total if total > 0 else 0
+            return (success_rate, passed, total)
+
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"  ❌ Error processing JSON file {output_file}: {e}", file=sys.stderr)
+        return (0.0, 0, 0)
 
 
 def main():
